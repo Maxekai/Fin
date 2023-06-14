@@ -185,23 +185,24 @@ class Looper:
             exchanger.integration()
             self.main_time += DT
             self.main_iteration +=1
-            #if time_between_perturbations > perturbation_interval:
-            #    time_between_perturbations = 0
-            #    change = 2*np.random.sample()*perturbation_range - perturbation_range
-            #    exchanger.controller.set_boundary_temperatures([exchanger.controller.temperatures[0],exchanger.controller.temperatures[1]+change])
-                
-            #if self.main_time > 1:
-                #exchanger.controller.set_boundary_temperatures([70,45])
-                #exchanger.controller.set_boundary_temperatures([70,40])
-            #if self.main_time > 59 and self.main_time%5 == 0:
-            #    valve.set_opening(valve.opening+0.05)
-            #if self.main_time >= 89:
-            #    valve.set_opening(VALUEW)
-            if self.main_time >= 89:
-                exchanger.controller.set_boundary_temperatures([VALUETINT,26])
             
-            #if self.main_time >= 79:
-            #    exchanger.controller.set_boundary_temperatures([VALUETINT,VALUETEXT])
+            ###
+            #TESTING DISTURBANCE SECTION. ACTIVATE THE DISTURBANCE BY REMOVING THE # FROM ALL ITS LINES.
+            #MODIFY WHEN THE DISTURBANCES WHAPPEN BY ADDING "+ X OR -X" TO T.
+
+            if self.main_time >= T:
+                valve.set_opening(VALUEW/Max_Valve_Flow)  #CHANGES VALVE OPENING (OUTER FLOW RATE)
+            
+            #if self.main_time >= T:
+            #    exchanger.controller.set_boundary_temperatures([VALUETINT,INITIAL_T_OUT])  #CHANGES INNER TEMP. WHILE KEEPING INITIAL OUTER TEMP.
+            
+            #if self.main_time >= T:
+            #    exchanger.controller.set_boundary_temperatures([INITIAL_T_IN,VALUETEXT]) #CHANGES OUTER TEMP. WHILE KEEPING INITIAL INNER TEMP.
+            
+            #if self.main_time >= T-10:
+            #    exchanger.controller.set_boundary_temperatures([VALUETINT,VALUETEXT]) #CHANGES BOTH TEMPERATURES
+            
+            #######
                 
             exchanger.storage.add_times(self.main_time)
             exchanger.storage.add_wfs(exchanger.sections[0].w_in,exchanger.sections[0].w_out)
@@ -351,6 +352,15 @@ class Valve:
         exchanger.controller.set_boundary_outer_w(self.get_w)
 
 
+### TESTING SETTINGS ###
+INITIAL_W = 12
+INITIAL_T_OUT = 70
+INITIAL_T_IN = 26
+VALUEW = 3
+VALUETEXT = 26
+VALUETINT = 73
+FILENAME = 'test.csv'
+#########################
 
 property_dictionary ={
             'U' : 1480,
@@ -362,10 +372,10 @@ property_dictionary ={
             'rho_inside' : 1000,
             't_ini_outside' : 20,
             't_ini_inside' : 40,
-            'w_ini_outside': 12,
+            'w_ini_outside': INITIAL_W,
             'w_ini_inside': 7,
-            'initial_t_entry_inside': 70,
-            'initial_t_entry_outside': 26
+            'initial_t_entry_inside': INITIAL_T_OUT,
+            'initial_t_entry_outside': INITIAL_T_IN
             }
 start = time.time()
 tiempo = 0
@@ -378,16 +388,15 @@ length = 25
 countercurrent = False 
 v_desv = False
 exchanger = Exchanger(length,property_dictionary,Nzonas,countercurrent,v_desv)
-Initial_Valve_State = 0.15
 Max_Valve_Flow = 20
+Initial_Valve_State = INITIAL_W/Max_Valve_Flow
 valve = Valve(exchanger,Max_Valve_Flow,Initial_Valve_State)
 looper = Looper(exchanger,valve)
-VALUEW = 0.6
-VALUETEXT = 26
-VALUETINT = 73
+NOISES = [0.05,0.05,0.025,0.05]
 T_ini_inside_changing = True
 T_ini_outside_changing = True
-NOISES = [0.05,0.05,0.025,0.05]
+
+T=89 ##do not change
 def produce_training_data(): 
     looper.initial_loop()
     looper.main_loop(60,2)
@@ -410,7 +419,7 @@ def produce_training_data():
     if T_ini_outside_changing ==False:
         df = df.drop(columns = ['Outer Temp.'])
     print(df)
-    df.to_csv('ZTEST4training_cases_twov_90_tint_73_w11_26.csv',sep = ';')
+    df.to_csv(FILENAME,sep = ';')  #SAVES THE FILE
     end = time.time()
     print(f'Elapsed time: {end-start} s')
     plt.plot(training_timers,exchanger.sensor.inner_temperatures)
